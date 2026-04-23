@@ -289,15 +289,30 @@ export default function StakeholderView({
                       </span>
                     ))}
                   </div>
-                  {sk.linkedin && (
-                    <div style={{ marginTop: '6px' }}>
-                      <a href={`https://${sk.linkedin}`} target="_blank" rel="noopener noreferrer"
-                        onClick={e => e.stopPropagation()}
-                        style={{ fontSize: '10px', color: '#6366f1', textDecoration: 'none' }}>
-                        View LinkedIn ↗
-                      </a>
-                    </div>
-                  )}
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+  {(sk as any).source === 'apollo' && (
+    <span style={{ fontSize: '9px', padding: '1px 6px', borderRadius: '10px', background: '#e8f4ff', color: '#0066cc', fontWeight: 600 }}>
+      ✓ Apollo verified
+    </span>
+  )}
+  {(sk as any).source === 'ai' && (
+    <span style={{ fontSize: '9px', padding: '1px 6px', borderRadius: '10px', background: '#f0f0ff', color: '#6366f1', fontWeight: 600 }}>
+      ✦ AI suggested
+    </span>
+  )}
+  {(sk as any).emailVerified && (
+    <span style={{ fontSize: '9px', padding: '1px 6px', borderRadius: '10px', background: '#f0faf5', color: '#059669', fontWeight: 600 }}>
+      ✓ Email verified
+    </span>
+  )}
+  {sk.linkedin && (
+    <a href={`https://${sk.linkedin}`} target="_blank" rel="noopener noreferrer"
+      onClick={e => e.stopPropagation()}
+      style={{ fontSize: '10px', color: '#6366f1', textDecoration: 'none' }}>
+      LinkedIn ↗
+    </a>
+  )}
+</div>
                 </div>
               ))}
 
