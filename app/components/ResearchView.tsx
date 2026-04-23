@@ -200,6 +200,8 @@ export default function ResearchView({ onCampaignLaunched }: { onCampaignLaunche
    {step >= 2 && (
   <StakeholderView
     company={company}
+    industry={industry}
+    research={research}
     onSelect={(sk) => {
       setSelectedStakeholder(sk)
       setStep(3)
