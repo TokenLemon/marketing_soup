@@ -2,6 +2,9 @@
 import { useState } from 'react'
 import LayoutShell from './layout-shell'
 import ResearchView from './components/ResearchView'
+import SignalsView from './components/SignalsView'
+import RAGBoard from './components/RAGBoard'
+import MeetingPrepView from './components/MeetingPrepView'
 
 // Global campaign store — holds all launched campaigns
 let globalCampaigns: any[] = []
@@ -28,6 +31,12 @@ export default function Home() {
         )
       case 'approval':
         return <ApprovalView campaigns={campaigns} />
+        case 'signals':
+  return <SignalsView />
+  case 'rag':
+  return <RAGBoard />
+  case 'meetingprep':
+  return <MeetingPrepView />
       default:
         return (
           <div style={{
