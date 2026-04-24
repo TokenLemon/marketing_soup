@@ -63,13 +63,22 @@ function ApprovalView({ campaigns }: { campaigns: any[] }) {
   const [sending, setSending] = useState<Record<string, boolean>>({})
   const [sentStatus, setSentStatus] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('gmail') === 'connected') {
-      setGmailConnected(true)
-      window.history.replaceState({}, '', '/')
-    }
-  }, [])
+ useEffect(() => {
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('gmail') === 'connected') {
+    setGmailConnected(true)
+    window.history.replaceState({}, '', '/')
+    return
+  }
+  // Check if Gmail cookie exists by probing the send endpoint
+  fetch('/api/send-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ checkOnly: true }),
+  }).then(r => {
+    if (r.status !== 401) setGmailConnected(true)
+  }).catch(() => {})
+}, [])
 
   function getKey(ci: number, si: number) { return `${ci}-${si}` }
   function getStatus(ci: number, si: number) { return statuses[getKey(ci, si)] || 'pending' }

@@ -23,7 +23,14 @@ function makeEmail(to: string, subject: string, body: string, from: string): str
 
 export async function POST(req: NextRequest) {
   try {
-    const { to, subject, body, fromName } = await req.json()
+    const payload = await req.json()
+
+// Handle checkOnly probe
+if (payload.checkOnly) {
+  return NextResponse.json({ ok: true })
+}
+
+const { to, subject, body, fromName } = payload
 
     // Get tokens from cookies
     const accessToken = req.cookies.get('gmail_access_token')?.value

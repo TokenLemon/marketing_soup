@@ -82,14 +82,17 @@ export default function StakeholderView({
       const data = await res.json()
 
       if (data.mode === 'confirm_company' && data.companies?.length > 0) {
-        setCompanyOptions(data.companies)
-        setConfirming(true)
-      } else if (data.mode === 'stakeholders') {
-        setStakeholders(data.stakeholders || [])
-        setSources(data.sources || null)
-      } else {
-        setError(data.error || 'Could not find stakeholders.')
-      }
+  setCompanyOptions(data.companies)
+  setConfirming(true)
+} else if (data.mode === 'stakeholders' && data.stakeholders?.length > 0) {
+  setStakeholders(data.stakeholders)
+  setSources(data.sources || null)
+  setConfirming(false)
+} else if (data.error) {
+  setError(data.error)
+} else {
+  setError('Could not find stakeholders. Try manual entry.')
+}
     } catch (e) {
       setError('Error connecting to search. Try manual entry.')
     }
@@ -190,9 +193,9 @@ export default function StakeholderView({
             How do you want to find stakeholders?
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button onClick={() => { setMode('ai'); setStakeholders([]); setSelected(null); runAISearch() }} style={TAB(mode === 'ai')}>
-              ✦ Apollo + AI Search
-            </button>
+           <button onClick={() => { setMode('ai'); setStakeholders([]); setSelected(null); runAISearch() }} style={TAB(mode === 'ai')}>
+  ✦ Lusha + AI Search
+</button>
             <button onClick={() => { setMode('notion'); setStakeholders([]); setSelected(null) }} style={TAB(mode === 'notion', '#6366f1')}>
               N  Import from Notion
             </button>
@@ -206,7 +209,7 @@ export default function StakeholderView({
         {loading && (
           <div style={{ padding: '24px', textAlign: 'center', color: '#8888a0', fontSize: '13px' }}>
             <div style={{ fontSize: '22px', marginBottom: '8px' }}>⟳</div>
-            {confirming ? 'Loading stakeholders...' : `Searching Apollo for contacts at ${company}...`}
+            {confirming ? 'Loading stakeholders...' : `Searching Lusha for contacts at ${company}...`}
           </div>
         )}
 

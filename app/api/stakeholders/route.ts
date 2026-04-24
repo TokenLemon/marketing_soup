@@ -105,6 +105,11 @@ export async function POST(req: NextRequest) {
 
         const companyData = JSON.parse(rawText)
         const companies = Array.isArray(companyData) ? companyData : []
+        // If rate limited, go straight to AI
+if (companyData.statusCode === 429) {
+  console.log('Lusha rate limited — falling back to AI')
+  return await aiOnlySearch(company, industry, research)
+}
 
         if (companies.length > 0) {
           return NextResponse.json({
