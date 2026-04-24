@@ -227,10 +227,16 @@ export default function ResearchView({ onCampaignLaunched }: { onCampaignLaunche
     stakeholder={selectedStakeholder}
     research={research}
     steps={sequenceSteps}
-    onNext={(items) => {
-      setContentItems(items)
-      setStep(5)
-    }}
+   onNext={(items) => {
+  // Attach stakeholder email to each email item
+  const enriched = items.map((item: any) => ({
+    ...item,
+    email: selectedStakeholder?.email || '',
+    to: selectedStakeholder?.email || '',
+  }))
+  setContentItems(enriched)
+  setStep(5)
+}}
   />
 )}
 

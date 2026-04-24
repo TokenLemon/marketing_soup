@@ -70,14 +70,15 @@ function ApprovalView({ campaigns }: { campaigns: any[] }) {
     window.history.replaceState({}, '', '/')
     return
   }
-  // Check if Gmail cookie exists by probing the send endpoint
   fetch('/api/send-email', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ checkOnly: true }),
-  }).then(r => {
-    if (r.status !== 401) setGmailConnected(true)
-  }).catch(() => {})
+  }).then(async r => {
+    const data = await r.json()
+    if (data.connected === true) setGmailConnected(true)
+    else setGmailConnected(false)
+  }).catch(() => setGmailConnected(false))
 }, [])
 
   function getKey(ci: number, si: number) { return `${ci}-${si}` }

@@ -17,24 +17,33 @@ function makeEmail(to: string, subject: string, body: string, from: string): str
     ``,
     body,
   ]
-  const email = emailLines.join('\r\n')
-  return Buffer.from(email).toString('base64url')
+  return Buffer.from(emailLines.join('\r\n')).toString('base64url')
 }
 
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json()
 
-// Handle checkOnly probe
-if (payload.checkOnly) {
-  return NextResponse.json({ ok: true })
-}
+    // Debug — log all cookies
+    const allCookies = req.cookies.getAll()
+    console.log('All cookies:', allCookies.map(c => c.name))
 
-const { to, subject, body, fromName } = payload
+    if (payload.checkOnly) {
+      const accessToken = req.cookies.get('gmail_access_token')?.value
+      const refreshToken = req.cookies.get('gmail_refresh_token')?.value
+      console.log('CheckOnly — access token exists:', !!accessToken, 'refresh token exists:', !!refreshToken)
+      if (!accessToken && !refreshToken) {
+        return NextResponse.json({ connected: false }, { status: 401 })
+      }
+      return NextResponse.json({ connected: true, ok: true })
+    }
 
-    // Get tokens from cookies
+    const { to, subject, body, fromName } = payload
+
     const accessToken = req.cookies.get('gmail_access_token')?.value
     const refreshToken = req.cookies.get('gmail_refresh_token')?.value
+
+    console.log('Send email — access token exists:', !!accessToken, 'refresh token exists:', !!refreshToken)
 
     if (!accessToken && !refreshToken) {
       return NextResponse.json(
@@ -49,12 +58,9 @@ const { to, subject, body, fromName } = payload
     })
 
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client })
-
-    // Get sender email
     const profile = await gmail.users.getProfile({ userId: 'me' })
     const fromEmail = profile.data.emailAddress || ''
     const from = fromName ? `${fromName} <${fromEmail}>` : fromEmail
-
     const rawEmail = makeEmail(to, subject, body, from)
 
     await gmail.users.messages.send({
@@ -69,12 +75,6 @@ const { to, subject, body, fromName } = payload
     })
   } catch (error: any) {
     console.error('Send email error:', error)
-    if (error?.status === 401 || error?.code === 401) {
-      return NextResponse.json(
-        { error: 'Gmail session expired. Please reconnect your Gmail account.' },
-        { status: 401 }
-      )
-    }
     return NextResponse.json(
       { error: 'Failed to send email. ' + (error?.message || '') },
       { status: 500 }
