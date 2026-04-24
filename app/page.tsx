@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import LayoutShell from './layout-shell'
 import ResearchView from './components/ResearchView'
 import SignalsView from './components/SignalsView'
@@ -62,9 +62,52 @@ export default function Home() {
   )
 }
 
-// Inline Approval View component
-function ApprovalView({ campaigns }: { campaigns: any[] }) {
+// Inline Approval View componentfunction ApprovalView({ campaigns }: { campaigns: any[] }) {
   const [statuses, setStatuses] = useState<Record<string, 'pending' | 'approved' | 'rejected'>>({})
+  const [gmailConnected, setGmailConnected] = useState(false)
+  const [sending, setSending] = useState<Record<string, boolean>>({})
+  const [sentStatus, setSentStatus] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('gmail') === 'connected') {
+      setGmailConnected(true)
+      window.history.replaceState({}, '', '/')
+    }
+    // Check if already connected via cookie presence
+    fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ checkOnly: true }) })
+      .then(r => { if (r.status !== 401) setGmailConnected(true) })
+      .catch(() => {})
+  }, [])
+
+  async function sendEmail(ci: number, si: number, item: any) {
+    const key = `${ci}-${si}`
+    setSending(prev => ({ ...prev, [key]: true }))
+    try {
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: item.to || item.email || '',
+          subject: item.subject || 'Vymo — connecting',
+          body: item.body || '',
+          fromName: 'Vymo Sales',
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setSentStatus(prev => ({ ...prev, [key]: `✓ Sent from ${data.from}` }))
+        setStatuses(prev => ({ ...prev, [key]: 'approved' }))
+      } else if (res.status === 401) {
+        setSentStatus(prev => ({ ...prev, [key]: 'Gmail not connected — connect above first' }))
+      } else {
+        setSentStatus(prev => ({ ...prev, [key]: `Error: ${data.error}` }))
+      }
+    } catch (e) {
+      setSentStatus(prev => ({ ...prev, [key]: 'Failed to send. Try again.' }))
+    }
+    setSending(prev => ({ ...prev, [key]: false }))
+  }
   const [editing, setEditing] = useState<Record<string, boolean>>({})
   const [editedBodies, setEditedBodies] = useState<Record<string, string>>({})
 
@@ -92,12 +135,39 @@ function ApprovalView({ campaigns }: { campaigns: any[] }) {
   }
 
   if (campaigns.length === 0) {
-    return (
-      <div>
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ fontSize: '22px', fontWeight: 600, color: '#1a1a2e', marginBottom: '4px' }}>Approval Queue</div>
-          <div style={{ fontSize: '13px', color: '#8888a0' }}>Review and approve AI-generated outreach before anything sends</div>
+  return (
+    <div>
+      <div style={{ marginBottom: '24px' }}>
+        <div style={{ fontSize: '22px', fontWeight: 600, color: '#1a1a2e', marginBottom: '4px' }}>Approval Queue</div>
+        <div style={{ fontSize: '13px', color: '#8888a0' }}>Review and approve AI-generated outreach before anything sends</div>
+      </div>
+      {!gmailConnected && (
+        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '14px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#d97706', marginBottom: '3px' }}>Connect Gmail to send approved emails</div>
+            <div style={{ fontSize: '12px', color: '#8888a0' }}>One-time setup. Uses your Google Workspace account.</div>
+          </div>
+          <a href="/api/auth/gmail" style={{ background: '#0066cc', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+            Connect Gmail →
+          </a>
         </div>
+      )}
+      {gmailConnected && (
+        <div style={{ background: '#f0faf5', border: '1px solid #d1fae5', borderRadius: '10px', padding: '10px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ color: '#059669', fontWeight: 600, fontSize: '13px' }}>✓ Gmail connected</span>
+          <span style={{ fontSize: '12px', color: '#8888a0' }}>Approved emails will send from your Gmail account</span>
+        </div>
+      )}
+      <div style={{ background: '#ffffff', border: '1px solid #e8e8ed', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
+        <div style={{ fontSize: '32px', marginBottom: '12px' }}>📭</div>
+        <div style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a2e', marginBottom: '6px' }}>No campaigns yet</div>
+        <div style={{ fontSize: '13px', color: '#8888a0', marginBottom: '20px' }}>
+          Run an account research and complete the flow to see campaigns here
+        </div>
+      </div>
+    </div>
+  )
+}
         <div style={{ background: '#ffffff', border: '1px solid #e8e8ed', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
           <div style={{ fontSize: '32px', marginBottom: '12px' }}>📭</div>
           <div style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a2e', marginBottom: '6px' }}>No campaigns yet</div>
@@ -116,12 +186,28 @@ function ApprovalView({ campaigns }: { campaigns: any[] }) {
   const approvedCount = allItems.filter(item => getStatus(item.ci, item.si) === 'approved').length
 
   return (
-    <div>
-      {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <div style={{ fontSize: '22px', fontWeight: 600, color: '#1a1a2e', marginBottom: '4px' }}>Approval Queue</div>
-        <div style={{ fontSize: '13px', color: '#8888a0' }}>Review and approve AI-generated outreach before anything sends</div>
+  <div>
+    <div style={{ marginBottom: '24px' }}>
+      <div style={{ fontSize: '22px', fontWeight: 600, color: '#1a1a2e', marginBottom: '4px' }}>Approval Queue</div>
+      <div style={{ fontSize: '13px', color: '#8888a0' }}>Review and approve AI-generated outreach before anything sends</div>
+    </div>
+
+    {!gmailConnected ? (
+      <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '14px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: '#d97706', marginBottom: '3px' }}>Connect Gmail to send approved emails</div>
+          <div style={{ fontSize: '12px', color: '#8888a0' }}>One-time setup. Uses your Google Workspace account.</div>
+        </div>
+        <a href="/api/auth/gmail" style={{ background: '#0066cc', color: '#fff', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
+          Connect Gmail →
+        </a>
       </div>
+    ) : (
+      <div style={{ background: '#f0faf5', border: '1px solid #d1fae5', borderRadius: '10px', padding: '10px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ color: '#059669', fontWeight: 600, fontSize: '13px' }}>✓ Gmail connected</span>
+        <span style={{ fontSize: '12px', color: '#8888a0' }}>Approved emails will send from your Gmail account</span>
+      </div>
+    )}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
@@ -218,9 +304,23 @@ function ApprovalView({ campaigns }: { campaigns: any[] }) {
 
                   {status === 'pending' && (
                     <div style={{ display: 'flex', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e8e8ed' }}>
-                      <button onClick={() => approve(ci, si)} style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: '7px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
-                        {isHuman ? '✓ Mark Done' : '✓ Approve & Send'}
-                      </button>
+                    <button
+  onClick={() => {
+    if (!isHuman && gmailConnected) {
+      sendEmail(ci, si, item)
+    } else {
+      approve(ci, si)
+    }
+  }}
+  disabled={sending[`${ci}-${si}`]}
+  style={{ background: sending[`${ci}-${si}`] ? '#e8e8ed' : '#059669', color: sending[`${ci}-${si}`] ? '#aaaabc' : '#fff', border: 'none', borderRadius: '7px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+  {sending[`${ci}-${si}`] ? '⟳ Sending...' : isHuman ? '✓ Mark Done' : gmailConnected ? '✓ Approve & Send' : '✓ Approve'}
+</button>
+{sentStatus[`${ci}-${si}`] && (
+  <span style={{ fontSize: '11px', color: sentStatus[`${ci}-${si}`].startsWith('✓') ? '#059669' : '#dc2626', marginLeft: '8px' }}>
+    {sentStatus[`${ci}-${si}`]}
+  </span>
+)}
                       <button onClick={() => toggleEdit(ci, si, item.body)} style={{ background: '#f5f5f7', color: '#444460', border: '1px solid #e8e8ed', borderRadius: '7px', padding: '8px 16px', fontSize: '12px', cursor: 'pointer' }}>
                         {editing[key] ? 'Save' : 'Edit'}
                       </button>
