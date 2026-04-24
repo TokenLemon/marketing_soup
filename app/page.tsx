@@ -6,7 +6,6 @@ import SignalsView from './components/SignalsView'
 import RAGBoard from './components/RAGBoard'
 import MeetingPrepView from './components/MeetingPrepView'
 
-// Global campaign store — holds all launched campaigns
 let globalCampaigns: any[] = []
 
 export default function Home() {
@@ -31,22 +30,15 @@ export default function Home() {
         )
       case 'approval':
         return <ApprovalView campaigns={campaigns} />
-        case 'signals':
-  return <SignalsView />
-  case 'rag':
-  return <RAGBoard />
-  case 'meetingprep':
-  return <MeetingPrepView />
+      case 'signals':
+        return <SignalsView />
+      case 'rag':
+        return <RAGBoard />
+      case 'meetingprep':
+        return <MeetingPrepView />
       default:
         return (
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid #e8e8ed',
-            borderRadius: '12px',
-            padding: '40px',
-            textAlign: 'center',
-            color: '#8888a0'
-          }}>
+          <div style={{ background: '#ffffff', border: '1px solid #e8e8ed', borderRadius: '12px', padding: '40px', textAlign: 'center', color: '#8888a0' }}>
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>🚧</div>
             <div style={{ fontSize: '14px', fontWeight: 600, color: '#1a1a2e', marginBottom: '4px' }}>Coming soon</div>
             <div style={{ fontSize: '13px' }}>This section is being built.</div>
@@ -62,8 +54,11 @@ export default function Home() {
   )
 }
 
-// Inline Approval View componentfunction ApprovalView({ campaigns }: { campaigns: any[] }) {
+// ── Approval View ─────────────────────────────────────────────
+function ApprovalView({ campaigns }: { campaigns: any[] }) {
   const [statuses, setStatuses] = useState<Record<string, 'pending' | 'approved' | 'rejected'>>({})
+  const [editing, setEditing] = useState<Record<string, boolean>>({})
+  const [editedBodies, setEditedBodies] = useState<Record<string, string>>({})
   const [gmailConnected, setGmailConnected] = useState(false)
   const [sending, setSending] = useState<Record<string, boolean>>({})
   const [sentStatus, setSentStatus] = useState<Record<string, string>>({})
@@ -74,48 +69,10 @@ export default function Home() {
       setGmailConnected(true)
       window.history.replaceState({}, '', '/')
     }
-    // Check if already connected via cookie presence
-    fetch('/api/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ checkOnly: true }) })
-      .then(r => { if (r.status !== 401) setGmailConnected(true) })
-      .catch(() => {})
   }, [])
 
-  async function sendEmail(ci: number, si: number, item: any) {
-    const key = `${ci}-${si}`
-    setSending(prev => ({ ...prev, [key]: true }))
-    try {
-      const res = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: item.to || item.email || '',
-          subject: item.subject || 'Vymo — connecting',
-          body: item.body || '',
-          fromName: 'Vymo Sales',
-        }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        setSentStatus(prev => ({ ...prev, [key]: `✓ Sent from ${data.from}` }))
-        setStatuses(prev => ({ ...prev, [key]: 'approved' }))
-      } else if (res.status === 401) {
-        setSentStatus(prev => ({ ...prev, [key]: 'Gmail not connected — connect above first' }))
-      } else {
-        setSentStatus(prev => ({ ...prev, [key]: `Error: ${data.error}` }))
-      }
-    } catch (e) {
-      setSentStatus(prev => ({ ...prev, [key]: 'Failed to send. Try again.' }))
-    }
-    setSending(prev => ({ ...prev, [key]: false }))
-  }
-  const [editing, setEditing] = useState<Record<string, boolean>>({})
-  const [editedBodies, setEditedBodies] = useState<Record<string, string>>({})
-
   function getKey(ci: number, si: number) { return `${ci}-${si}` }
-
-  function getStatus(ci: number, si: number) {
-    return statuses[getKey(ci, si)] || 'pending'
-  }
+  function getStatus(ci: number, si: number) { return statuses[getKey(ci, si)] || 'pending' }
 
   function approve(ci: number, si: number) {
     setStatuses(prev => ({ ...prev, [getKey(ci, si)]: 'approved' }))
@@ -128,55 +85,38 @@ export default function Home() {
 
   function toggleEdit(ci: number, si: number, body: string) {
     const key = getKey(ci, si)
-    if (!editedBodies[key]) {
-      setEditedBodies(prev => ({ ...prev, [key]: body }))
-    }
+    if (!editedBodies[key]) setEditedBodies(prev => ({ ...prev, [key]: body }))
     setEditing(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
-  if (campaigns.length === 0) {
-  return (
-    <div>
-      <div style={{ marginBottom: '24px' }}>
-        <div style={{ fontSize: '22px', fontWeight: 600, color: '#1a1a2e', marginBottom: '4px' }}>Approval Queue</div>
-        <div style={{ fontSize: '13px', color: '#8888a0' }}>Review and approve AI-generated outreach before anything sends</div>
-      </div>
-      {!gmailConnected && (
-        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '14px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#d97706', marginBottom: '3px' }}>Connect Gmail to send approved emails</div>
-            <div style={{ fontSize: '12px', color: '#8888a0' }}>One-time setup. Uses your Google Workspace account.</div>
-          </div>
-          <a href="/api/auth/gmail" style={{ background: '#0066cc', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-            Connect Gmail →
-          </a>
-        </div>
-      )}
-      {gmailConnected && (
-        <div style={{ background: '#f0faf5', border: '1px solid #d1fae5', borderRadius: '10px', padding: '10px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ color: '#059669', fontWeight: 600, fontSize: '13px' }}>✓ Gmail connected</span>
-          <span style={{ fontSize: '12px', color: '#8888a0' }}>Approved emails will send from your Gmail account</span>
-        </div>
-      )}
-      <div style={{ background: '#ffffff', border: '1px solid #e8e8ed', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
-        <div style={{ fontSize: '32px', marginBottom: '12px' }}>📭</div>
-        <div style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a2e', marginBottom: '6px' }}>No campaigns yet</div>
-        <div style={{ fontSize: '13px', color: '#8888a0', marginBottom: '20px' }}>
-          Run an account research and complete the flow to see campaigns here
-        </div>
-      </div>
-    </div>
-  )
-}
-        <div style={{ background: '#ffffff', border: '1px solid #e8e8ed', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
-          <div style={{ fontSize: '32px', marginBottom: '12px' }}>📭</div>
-          <div style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a2e', marginBottom: '6px' }}>No campaigns yet</div>
-          <div style={{ fontSize: '13px', color: '#8888a0', marginBottom: '20px' }}>
-            Run an account research and complete the flow to see campaigns here
-          </div>
-        </div>
-      </div>
-    )
+  async function sendEmail(ci: number, si: number, item: any) {
+    const key = getKey(ci, si)
+    setSending(prev => ({ ...prev, [key]: true }))
+    try {
+      const body = editedBodies[key] ?? item.body ?? ''
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: item.email || '',
+          subject: item.subject || 'Vymo — connecting',
+          body,
+          fromName: 'Vymo Sales',
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setSentStatus(prev => ({ ...prev, [key]: `✓ Sent from ${data.from}` }))
+        setStatuses(prev => ({ ...prev, [key]: 'approved' }))
+      } else if (res.status === 401) {
+        setSentStatus(prev => ({ ...prev, [key]: 'Gmail not connected — click Connect Gmail above' }))
+      } else {
+        setSentStatus(prev => ({ ...prev, [key]: `Error: ${data.error}` }))
+      }
+    } catch (e) {
+      setSentStatus(prev => ({ ...prev, [key]: 'Failed to send. Try again.' }))
+    }
+    setSending(prev => ({ ...prev, [key]: false }))
   }
 
   const allItems = campaigns.flatMap((c, ci) =>
@@ -185,31 +125,49 @@ export default function Home() {
   const pendingCount = allItems.filter(item => getStatus(item.ci, item.si) === 'pending').length
   const approvedCount = allItems.filter(item => getStatus(item.ci, item.si) === 'approved').length
 
-  return (
-  <div>
-    <div style={{ marginBottom: '24px' }}>
-      <div style={{ fontSize: '22px', fontWeight: 600, color: '#1a1a2e', marginBottom: '4px' }}>Approval Queue</div>
-      <div style={{ fontSize: '13px', color: '#8888a0' }}>Review and approve AI-generated outreach before anything sends</div>
+  const GmailBanner = () => !gmailConnected ? (
+    <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '14px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: '#d97706', marginBottom: '3px' }}>Connect Gmail to send approved emails</div>
+        <div style={{ fontSize: '12px', color: '#8888a0' }}>One-time setup. Uses your Google Workspace account.</div>
+      </div>
+      <a href="/api/auth/gmail" style={{ background: '#0066cc', color: '#fff', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
+        Connect Gmail →
+      </a>
     </div>
+  ) : (
+    <div style={{ background: '#f0faf5', border: '1px solid #d1fae5', borderRadius: '10px', padding: '10px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <span style={{ color: '#059669', fontWeight: 600, fontSize: '13px' }}>✓ Gmail connected</span>
+      <span style={{ fontSize: '12px', color: '#8888a0' }}>Approved emails will send from your Gmail account</span>
+    </div>
+  )
 
-    {!gmailConnected ? (
-      <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '14px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: '#d97706', marginBottom: '3px' }}>Connect Gmail to send approved emails</div>
-          <div style={{ fontSize: '12px', color: '#8888a0' }}>One-time setup. Uses your Google Workspace account.</div>
+  if (campaigns.length === 0) {
+    return (
+      <div>
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ fontSize: '22px', fontWeight: 600, color: '#1a1a2e', marginBottom: '4px' }}>Approval Queue</div>
+          <div style={{ fontSize: '13px', color: '#8888a0' }}>Review and approve AI-generated outreach before anything sends</div>
         </div>
-        <a href="/api/auth/gmail" style={{ background: '#0066cc', color: '#fff', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
-          Connect Gmail →
-        </a>
+        <GmailBanner />
+        <div style={{ background: '#ffffff', border: '1px solid #e8e8ed', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
+          <div style={{ fontSize: '32px', marginBottom: '12px' }}>📭</div>
+          <div style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a2e', marginBottom: '6px' }}>No campaigns yet</div>
+          <div style={{ fontSize: '13px', color: '#8888a0' }}>Run an account research and complete the flow to see campaigns here</div>
+        </div>
       </div>
-    ) : (
-      <div style={{ background: '#f0faf5', border: '1px solid #d1fae5', borderRadius: '10px', padding: '10px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ color: '#059669', fontWeight: 600, fontSize: '13px' }}>✓ Gmail connected</span>
-        <span style={{ fontSize: '12px', color: '#8888a0' }}>Approved emails will send from your Gmail account</span>
-      </div>
-    )}
+    )
+  }
 
-      {/* Stats */}
+  return (
+    <div>
+      <div style={{ marginBottom: '24px' }}>
+        <div style={{ fontSize: '22px', fontWeight: 600, color: '#1a1a2e', marginBottom: '4px' }}>Approval Queue</div>
+        <div style={{ fontSize: '13px', color: '#8888a0' }}>Review and approve AI-generated outreach before anything sends</div>
+      </div>
+
+      <GmailBanner />
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
         <div style={{ background: '#ffffff', border: '1px solid #e8e8ed', borderRadius: '10px', padding: '16px' }}>
           <div style={{ fontSize: '24px', fontWeight: 700, color: '#d97706' }}>{pendingCount}</div>
@@ -225,15 +183,12 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Notice */}
       <div style={{ background: '#f0faf5', border: '1px solid #d1fae5', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '12px', color: '#065f46', lineHeight: '1.6' }}>
         <strong>Nothing sends without your approval.</strong> Email steps send via Gmail after approval. LinkedIn and call steps are flagged for manual action.
       </div>
 
-      {/* Campaign groups */}
       {campaigns.map((campaign, ci) => (
         <div key={ci} style={{ marginBottom: '24px' }}>
-          {/* Campaign header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e8f4ff', color: '#0066cc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700 }}>
               {campaign.stakeholder?.initials || '?'}
@@ -251,7 +206,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Steps */}
           {(campaign.content || []).map((item: any, si: number) => {
             const status = getStatus(ci, si)
             const key = getKey(ci, si)
@@ -261,12 +215,10 @@ export default function Home() {
 
             return (
               <div key={si} style={{ border: `1px solid ${borderColor}`, borderRadius: '10px', overflow: 'hidden', marginBottom: '10px', transition: 'border .2s' }}>
-                {/* Step header */}
                 <div style={{ padding: '10px 14px', background: status === 'approved' ? '#f0faf5' : status === 'rejected' ? '#fff0f0' : '#f5f5f7', borderBottom: '1px solid #e8e8ed', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '12px', fontWeight: 600, color: '#1a1a2e' }}>
-                      Step {item.step} — {item.channel}
-                      {isHuman ? ' · Human Action' : ' · Email'}
+                      Step {item.step} — {item.channel}{isHuman ? ' · Human Action' : ' · Email'}
                     </div>
                   </div>
                   {status === 'pending' && <span style={{ fontSize: '10px', background: '#fff7ed', color: '#d97706', padding: '2px 8px', borderRadius: '20px', fontWeight: 600 }}>PENDING</span>}
@@ -274,7 +226,6 @@ export default function Home() {
                   {status === 'rejected' && <span style={{ fontSize: '10px', background: '#fff0f0', color: '#dc2626', padding: '2px 8px', borderRadius: '20px', fontWeight: 600 }}>✕ REJECTED</span>}
                 </div>
 
-                {/* Step body */}
                 <div style={{ padding: '14px', background: '#ffffff' }}>
                   {!isHuman && item.subject && (
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', padding: '8px 12px', background: '#f5f5f7', borderRadius: '6px' }}>
@@ -303,33 +254,30 @@ export default function Home() {
                   )}
 
                   {status === 'pending' && (
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e8e8ed' }}>
-                    <button
-  onClick={() => {
-    if (!isHuman && gmailConnected) {
-      sendEmail(ci, si, item)
-    } else {
-      approve(ci, si)
-    }
-  }}
-  disabled={sending[`${ci}-${si}`]}
-  style={{ background: sending[`${ci}-${si}`] ? '#e8e8ed' : '#059669', color: sending[`${ci}-${si}`] ? '#aaaabc' : '#fff', border: 'none', borderRadius: '7px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
-  {sending[`${ci}-${si}`] ? '⟳ Sending...' : isHuman ? '✓ Mark Done' : gmailConnected ? '✓ Approve & Send' : '✓ Approve'}
-</button>
-{sentStatus[`${ci}-${si}`] && (
-  <span style={{ fontSize: '11px', color: sentStatus[`${ci}-${si}`].startsWith('✓') ? '#059669' : '#dc2626', marginLeft: '8px' }}>
-    {sentStatus[`${ci}-${si}`]}
-  </span>
-)}
-                      <button onClick={() => toggleEdit(ci, si, item.body)} style={{ background: '#f5f5f7', color: '#444460', border: '1px solid #e8e8ed', borderRadius: '7px', padding: '8px 16px', fontSize: '12px', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e8e8ed', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => isHuman ? approve(ci, si) : sendEmail(ci, si, item)}
+                        disabled={sending[key]}
+                        style={{ background: sending[key] ? '#e8e8ed' : '#059669', color: sending[key] ? '#aaaabc' : '#fff', border: 'none', borderRadius: '7px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: sending[key] ? 'not-allowed' : 'pointer' }}>
+                        {sending[key] ? '⟳ Sending...' : isHuman ? '✓ Mark Done' : gmailConnected ? '✓ Approve & Send' : '✓ Approve'}
+                      </button>
+                      <button onClick={() => toggleEdit(ci, si, item.body)}
+                        style={{ background: '#f5f5f7', color: '#444460', border: '1px solid #e8e8ed', borderRadius: '7px', padding: '8px 16px', fontSize: '12px', cursor: 'pointer' }}>
                         {editing[key] ? 'Save' : 'Edit'}
                       </button>
                       {isHuman && (
-                        <button onClick={() => navigator.clipboard.writeText(body)} style={{ background: '#f0f0ff', color: '#6366f1', border: '1px solid #c7d2fe', borderRadius: '7px', padding: '8px 16px', fontSize: '12px', cursor: 'pointer' }}>
+                        <button onClick={() => navigator.clipboard.writeText(body)}
+                          style={{ background: '#f0f0ff', color: '#6366f1', border: '1px solid #c7d2fe', borderRadius: '7px', padding: '8px 16px', fontSize: '12px', cursor: 'pointer' }}>
                           Copy
                         </button>
                       )}
-                      <button onClick={() => reject(ci, si)} style={{ background: '#fff0f0', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '7px', padding: '8px 16px', fontSize: '12px', cursor: 'pointer', marginLeft: 'auto' }}>
+                      {sentStatus[key] && (
+                        <span style={{ fontSize: '11px', color: sentStatus[key].startsWith('✓') ? '#059669' : '#dc2626' }}>
+                          {sentStatus[key]}
+                        </span>
+                      )}
+                      <button onClick={() => reject(ci, si)}
+                        style={{ background: '#fff0f0', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '7px', padding: '8px 16px', fontSize: '12px', cursor: 'pointer', marginLeft: 'auto' }}>
                         Reject
                       </button>
                     </div>
@@ -337,13 +285,11 @@ export default function Home() {
 
                   {status === 'approved' && (
                     <div style={{ marginTop: '10px', fontSize: '12px', color: '#059669' }}>
-                      ✓ {isHuman ? 'Marked as done — sequence continues' : 'Approved — will send via Gmail'}
+                      ✓ {isHuman ? 'Marked as done' : sentStatus[key] || 'Approved'}
                     </div>
                   )}
                   {status === 'rejected' && (
-                    <div style={{ marginTop: '10px', fontSize: '12px', color: '#dc2626' }}>
-                      ✕ Rejected — this step will be skipped
-                    </div>
+                    <div style={{ marginTop: '10px', fontSize: '12px', color: '#dc2626' }}>✕ Rejected — step skipped</div>
                   )}
                 </div>
               </div>
