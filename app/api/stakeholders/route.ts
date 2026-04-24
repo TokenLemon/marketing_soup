@@ -97,17 +97,19 @@ export async function POST(req: NextRequest) {
 
     try {
       // Search by domain which is more reliable than org ID
-      const searchBody: any = {
-        person_titles: icpTitles,
-        page: 1,
-        per_page: 25,
-      }
+     const searchBody: any = {
+  person_titles: icpTitles,
+  page: 1,
+  per_page: 25,
+}
 
-      if (apolloDomain) {
-        searchBody.q_organization_domains = [apolloDomain]
-      } else {
-        searchBody.organization_ids = [apolloOrgId]
-      }
+if (apolloDomain) {
+  searchBody.q_organization_domains = [apolloDomain]
+} else {
+  // Domain is null — use org name as search filter
+  searchBody.q_organization_name = company
+  searchBody.organization_ids = [apolloOrgId]
+}
 
       const peopleRes = await fetch('https://api.apollo.io/v1/mixed_people/search', {
         method: 'POST',
@@ -119,6 +121,7 @@ export async function POST(req: NextRequest) {
       })
 
       const peopleData = await peopleRes.json()
+      console.log('Apollo people response:', JSON.stringify(peopleData).slice(0, 300))
       apolloStakeholders = peopleData.people || []
       console.log(`Apollo returned ${apolloStakeholders.length} people for ${company}`)
     } catch (e) {

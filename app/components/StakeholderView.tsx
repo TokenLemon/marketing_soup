@@ -173,11 +173,11 @@ export default function StakeholderView({
         <div style={{ fontWeight: 600, fontSize: '14px', color: '#1a1a2e' }}>Stakeholder Map — {company}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {sources && (
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {sources.apollo > 0 && <span style={{ fontSize: '10px', background: '#e8f4ff', color: '#0066cc', padding: '2px 8px', borderRadius: '20px', fontWeight: 600 }}>✓ {sources.apollo} from Apollo</span>}
-              {sources.ai > 0 && <span style={{ fontSize: '10px', background: '#f0f0ff', color: '#6366f1', padding: '2px 8px', borderRadius: '20px', fontWeight: 600 }}>✦ {sources.ai} AI suggested</span>}
-            </div>
-          )}
+  <div style={{ display: 'flex', gap: '6px' }}>
+    {(sources as any).lusha > 0 && <span style={{ fontSize: '10px', background: '#e8f4ff', color: '#0066cc', padding: '2px 8px', borderRadius: '20px', fontWeight: 600 }}>✓ {(sources as any).lusha} from Lusha</span>}
+    {sources.ai > 0 && <span style={{ fontSize: '10px', background: '#f0f0ff', color: '#6366f1', padding: '2px 8px', borderRadius: '20px', fontWeight: 600 }}>✦ {sources.ai} AI suggested</span>}
+  </div>
+)}
           {!sources && <span style={{ fontSize: '10px', background: '#e8f4ff', color: '#0066cc', padding: '2px 8px', borderRadius: '20px', fontWeight: 600 }}>SELECT SOURCE</span>}
         </div>
       </div>
@@ -367,9 +367,9 @@ export default function StakeholderView({
                     ))}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
-                    {sk.source === 'apollo' && (
-                      <span style={{ fontSize: '9px', padding: '1px 6px', borderRadius: '10px', background: '#e8f4ff', color: '#0066cc', fontWeight: 600 }}>✓ Apollo</span>
-                    )}
+                    {sk.source === 'lusha' && (
+  <span style={{ fontSize: '9px', padding: '1px 6px', borderRadius: '10px', background: '#e8f4ff', color: '#0066cc', fontWeight: 600 }}>✓ Lusha</span>
+)}
                     {sk.source === 'ai' && (
                       <span style={{ fontSize: '9px', padding: '1px 6px', borderRadius: '10px', background: '#f0f0ff', color: '#6366f1', fontWeight: 600 }}>✦ AI suggested</span>
                     )}
