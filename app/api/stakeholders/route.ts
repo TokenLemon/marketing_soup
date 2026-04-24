@@ -108,7 +108,18 @@ export async function POST(req: NextRequest) {
         // If rate limited, go straight to AI
 if (companyData.statusCode === 429) {
   console.log('Lusha rate limited — falling back to AI')
-  return await aiOnlySearch(company, industry, research)
+  // Pass dummy org to trigger AI path directly
+  return await POST(new NextRequest(req.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      company,
+      industry,
+      research,
+      lushaCompanyId: 'ai-fallback',
+      companyDomain: company.toLowerCase().replace(/\s+/g, '') + '.com',
+    }),
+  }))
 }
 
         if (companies.length > 0) {
